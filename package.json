@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "description": "A program and API that analysis MIDI data using basic neural networks",
   "main": "src/index.js",
+  "bin": "src/cli.js",
   "files": [
     "src"
   ],
   "dependencies": {
+    "args": "^3.0.8",
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-eslint": "^8.2.2",

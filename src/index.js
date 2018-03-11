@@ -6,7 +6,7 @@ const SOM = require('ml-som')
 const collectMidiData = require('./collectMidiData.js')
 const getMidiInput = require('./getMidiInput.js')
 
-async function run() {
+module.exports = async function run({ verbose }) {
   const midiInput = await getMidiInput()
 
   if (midiInput === null) {
@@ -44,7 +44,7 @@ async function run() {
           type: 'cc',
           channel: 0,
           id: 1 + i,
-          verbose: false,
+          verbose,
         })
       )
     )
@@ -92,5 +92,3 @@ async function run() {
     logUpdate(output)
   }
 }
-
-run().catch(err => console.log('err', err))
