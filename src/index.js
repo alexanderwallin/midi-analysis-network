@@ -1,18 +1,33 @@
 /* eslint no-await-in-loop: 0 */
-const { fill, max, min } = require('lodash')
+const { chunk, fill, max, min } = require('lodash')
 const logUpdate = require('log-update')
 const SOM = require('ml-som')
 
+const { DEFAULT_DURATION, MidiCommandType } = require('./constants.js')
 const collectMidiData = require('./collectMidiData.js')
 const getMidiInput = require('./getMidiInput.js')
 
-module.exports = async function run({ verbose }) {
-  const midiInput = await getMidiInput()
+module.exports = async function run({
+  channels = [0],
+  command = MidiCommandType.CC,
+  controlIds = [],
+  device = null,
+  duration = DEFAULT_DURATION,
+  verbose = false,
+}) {
+  const midiInput = await getMidiInput({ device })
 
   if (midiInput === null) {
     console.log('\nNo MIDI devices were found. 😔\n')
     process.exit(0)
   }
+
+  if (controlIds.length === 0) {
+    console.log('\nYou must provide control IDs.\n')
+    process.exit(0)
+  }
+
+  midiInput.setMaxListeners(128)
 
   // MIDI channel SOM
   const som = new SOM(3, 3, {
@@ -32,27 +47,30 @@ module.exports = async function run({ verbose }) {
 
   // Aggregated SOM
   const aggregatedSom = new SOM(3, 3, {
-    fields: 8,
+    fields: channels.length,
   })
-  aggregatedSom.train([fill(Array(8), 0)])
+  aggregatedSom.train([fill(Array(channels.length), 0)])
 
   while (true) {
+    // Get MIDI data for all channels and controls
+    const midiInputListenerConfigs = fill(
+      Array(channels.length * controlIds.length),
+      0
+    ).map((x, i) => ({
+      duration: 1000,
+      type: command,
+      channel: channels[i % channels.length],
+      controlId: controlIds[Math.floor(i / channels.length)],
+      verbose,
+    }))
     const midiChannelInputs = await Promise.all(
-      fill(Array(8), 0).map((x, i) =>
-        collectMidiData(midiInput, {
-          duration: 1000,
-          type: 'cc',
-          channel: 0,
-          id: 1 + i,
-          verbose,
-        })
-      )
+      midiInputListenerConfigs.map(config => collectMidiData(midiInput, config))
     )
 
-    const results = midiChannelInputs.map(midiValues => {
-      const frequency = Math.min(400, midiValues.length)
-      const range =
-        midiValues.length > 0 ? max(midiValues) - min(midiValues) : 0
+    // Get SOM predictions
+    const predictions = midiChannelInputs.map(({ values }) => {
+      const frequency = Math.min(400, values.length)
+      const range = values.length > 0 ? max(values) - min(values) : 0
       const input = { frequency, range }
       const prediction = som.predict(input)
       som.train(input)
@@ -60,32 +78,56 @@ module.exports = async function run({ verbose }) {
       return prediction
     })
 
-    const aggregatedInput = results.map(([x, y]) => y * 3 + x)
-    const aggregatedPrediction = aggregatedSom.predict(aggregatedInput)
-    aggregatedSom.train([aggregatedInput])
+    // Aggregate predictions per control
+    const aggregatedInputs = chunk(predictions, channels.length).map(
+      controlPredictions => controlPredictions.map(([x, y]) => (y * 3 + x) / 8)
+    )
+    const aggregatedPredictions = aggregatedInputs.map(controlPredictions =>
+      aggregatedSom.predict(controlPredictions)
+    )
 
-    let output = '\n 1    2    3    4    5    6    7    8    |  🦄\n'
+    aggregatedSom.train(aggregatedInputs)
 
-    for (let i = 0; i < 3; i += 1) {
-      output += ' '
-      output += results
-        .map(prediction => {
-          const row = [0, 0, 0]
-          if (prediction[1] === i) {
-            row[prediction[0]] = 1
-          }
-          return row.join('')
-        })
-        .join('  ')
-      output += '  |  '
-      output += [0, 0, 0]
-        .map(
-          (x, j) =>
-            aggregatedPrediction[1] === i && aggregatedPrediction[0] === j
-              ? 1
-              : 0
-        )
-        .join('')
+    //
+    // Log all the things
+    //
+    let output = `\n    ${channels.join('    ')}    |  🦄`
+    output += `\n    ${'-'.repeat(channels.length * 4)}-----------`
+    output += '\n'
+
+    for (const controlId of controlIds) {
+      output += `${String(controlId).padStart(3, ' ')}`
+
+      const controlIdx = controlIds.indexOf(controlId)
+
+      for (let i = 0; i < 3; i += 1) {
+        output += i === 0 ? ' ' : '    '
+        output += predictions
+          .slice(
+            controlIdx * channels.length,
+            (controlIdx + 1) * channels.length
+          )
+          .map(prediction => {
+            const row = [0, 0, 0]
+            if (prediction[1] === i) {
+              row[prediction[0]] = 1
+            }
+            return row.join('')
+          })
+          .join('  ')
+        output += '  |  '
+        output += [0, 0, 0]
+          .map(
+            (x, j) =>
+              aggregatedPredictions[controlIdx][1] === i &&
+              aggregatedPredictions[controlIdx][0] === j
+                ? 1
+                : 0
+          )
+          .join('')
+        output += '\n'
+      }
+
       output += '\n'
     }
 

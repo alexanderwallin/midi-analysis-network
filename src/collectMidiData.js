@@ -1,20 +1,38 @@
+const { inRange } = require('lodash')
+
+const { MidiCommandType } = require('./constants.js')
+
+const CC_COMMAND_TYPE_ID = 176
+
 async function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 module.exports = async function collectMidiData(
   input,
-  { duration, type = 'cc', id = null, channel = 0, verbose = false }
+  {
+    duration,
+    type = MidiCommandType.CC,
+    controlId = null,
+    channel = 0,
+    verbose = false,
+  }
 ) {
   const values = []
 
-  const storeMidiValue = (deltaTime, [command, inputId, value]) => {
+  const storeMidiValue = (deltaTime, [command, inputControlId, value]) => {
     if (verbose === true) {
-      console.log({ command, inputId, value })
+      console.log({ command, inputControlId, value })
     }
 
-    if (type === 'cc' && 176 <= command && command < 192) {
-      if (channel === command - 176 && (id === null || id === inputId)) {
+    if (
+      type === MidiCommandType.CC &&
+      inRange(command, CC_COMMAND_TYPE_ID, CC_COMMAND_TYPE_ID + 16) === true
+    ) {
+      if (
+        channel === command - CC_COMMAND_TYPE_ID &&
+        (controlId === null || controlId === inputControlId)
+      ) {
         values.push(value)
       }
     }
@@ -24,5 +42,5 @@ module.exports = async function collectMidiData(
   await delay(duration)
   input.removeListener('message', storeMidiValue)
 
-  return values
+  return { channel, controlId, values }
 }

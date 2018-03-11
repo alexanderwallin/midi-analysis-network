@@ -2,7 +2,7 @@
 const inquirer = require('inquirer')
 const midi = require('midi')
 
-module.exports = async function getMidiInput() {
+module.exports = async function getMidiInput({ device }) {
   const input = new midi.input()
   const portNames = new Array(input.getPortCount())
     .fill(null)
@@ -12,15 +12,24 @@ module.exports = async function getMidiInput() {
     return null
   }
 
-  const { port } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'port',
-      message: 'Choose a MIDI port',
-      choices: portNames,
-    },
-  ])
+  let resolvedPort = device
+  if (resolvedPort === null) {
+    const { port } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'port',
+        message: 'Choose a MIDI port',
+        choices: portNames,
+      },
+    ])
+    resolvedPort = port
+  }
 
-  input.openPort(portNames.indexOf(port))
+  const portIdx = portNames.indexOf(resolvedPort)
+  if (portIdx === -1) {
+    return null
+  }
+
+  input.openPort(portIdx)
   return input
 }
