@@ -1,7 +1,7 @@
 {
   "name": "midi-analysis-network",
   "version": "1.0.0",
-  "description": "",
+  "description": "A program and API that analysis MIDI data using basic neural networks",
   "main": "src/index.js",
   "files": [
     "src"
