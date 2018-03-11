@@ -21,6 +21,7 @@
     "eslint-config-prettier": "^2.9.0",
     "eslint-plugin-import": "^2.9.0",
     "eslint-plugin-prettier": "^2.6.0",
+    "express": "^4.16.2",
     "inquirer": "^5.1.0",
     "lodash": "^4.17.5",
     "log-update": "^2.3.0",
