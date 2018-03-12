@@ -29,8 +29,14 @@ module.exports = async function collectMidiData(
       type === MidiCommandType.CC &&
       inRange(command, CC_COMMAND_TYPE_ID, CC_COMMAND_TYPE_ID + 16) === true
     ) {
+      const inputChannel = command - CC_COMMAND_TYPE_ID + 1
+
+      if (verbose === true) {
+        console.log({ channel, inputChannel, controlId, inputControlId })
+      }
+
       if (
-        channel === command - CC_COMMAND_TYPE_ID &&
+        channel === inputChannel &&
         (controlId === null || controlId === inputControlId)
       ) {
         values.push(value)
