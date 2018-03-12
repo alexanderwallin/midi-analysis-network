@@ -44,8 +44,11 @@ module.exports = async function run(options) {
 
   // Exit handler
   async function exitHandler() {
-    midiInput.close()
-    await delay(500)
+    if (midiInput) {
+      midiInput.close()
+      await delay(500)
+    }
+
     process.exit(0)
   }
 

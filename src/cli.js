@@ -8,8 +8,7 @@ const OPTION_ALL = 'all'
 
 args.option(
   'channels',
-  'A comma-separated list of channels to listen to, or "all"',
-  '0'
+  'A comma-separated list of channels to listen to, or "all"'
 )
 args.option('controls', 'A comma-separated list of control IDs to listen to')
 args.option(
@@ -35,7 +34,10 @@ const { channels, command, controls, device, duration, verbose } = args.parse(
 const channelsArray =
   channels === OPTION_ALL
     ? new Array(16).fill(0).map((x, i) => i)
-    : channels.split(',').map(x => parseInt(x))
+    : String(channels)
+        .split(',')
+        .map(x => parseInt(x))
+
 const resolvedControlIds =
   controls === undefined
     ? []

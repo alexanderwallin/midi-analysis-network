@@ -13,7 +13,7 @@ module.exports = async function getMidiInput({ device }) {
   }
 
   let resolvedPort = device
-  if (resolvedPort === null) {
+  if (!resolvedPort) {
     const { port } = await inquirer.prompt([
       {
         type: 'list',
