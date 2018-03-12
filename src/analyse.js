@@ -13,7 +13,7 @@ module.exports.getPredictions = function getPredictions() {
   return predictions
 }
 
-module.exports.getAggregataedPredictions = function getAggregataedPredictions() {
+module.exports.getAggregatedPredictions = function getAggregatedPredictions() {
   return aggregatedPredictions
 }
 

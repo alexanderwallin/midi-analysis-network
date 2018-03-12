@@ -1,6 +1,10 @@
 const express = require('express')
 
-const { analyse, getPredictions } = require('./analyse.js')
+const {
+  analyse,
+  getAggregatedPredictions,
+  getPredictions,
+} = require('./analyse.js')
 const getMidiInput = require('./getMidiInput.js')
 
 module.exports = async function run(options) {
@@ -14,7 +18,7 @@ module.exports = async function run(options) {
   })
 
   app.get('/aggregated-predictions', (req, res) => {
-    const aggregatedPredictions = getAggregataedPredictions()
+    const aggregatedPredictions = getAggregatedPredictions()
     res.json({ data: aggregatedPredictions })
   })
 
