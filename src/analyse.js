@@ -3,18 +3,31 @@ const { chunk, fill, max, min } = require('lodash')
 const logUpdate = require('log-update')
 const SOM = require('ml-som')
 
-const { DEFAULT_DURATION, MidiCommandType } = require('./constants.js')
+const { Axis, DEFAULT_DURATION, MidiCommandType } = require('./constants.js')
 const collectMidiData = require('./collectMidiData.js')
+const {
+  createAggregator,
+  aggregatePredictions,
+} = require('./som-aggregation.js')
 
 let predictions = []
-let aggregatedPredictions = []
+let channelAggregations = []
+let controlAggregations = []
+
+function arr(numElements) {
+  return new Array(numElements).fill(null)
+}
 
 module.exports.getPredictions = function getPredictions() {
   return predictions
 }
 
-module.exports.getAggregatedPredictions = function getAggregatedPredictions() {
-  return aggregatedPredictions
+module.exports.getChannelPredictions = function getChannelPredictions() {
+  return channelAggregations
+}
+
+module.exports.getControlPredictions = function getControlPredictions() {
+  return controlAggregations
 }
 
 module.exports.analyse = async function analyse(
@@ -56,17 +69,18 @@ module.exports.analyse = async function analyse(
     { frequency: 150, range: 40 },
   ])
 
-  // Aggregated SOM
-  const aggregatedSom = new SOM(3, 3, {
-    fields: channels.length,
-  })
-  aggregatedSom.train([fill(Array(channels.length), 0)])
+  // Aggregated SOMs
+  const channelAggregators = arr(channels.length).map(() =>
+    createAggregator(controlIds.length)
+  )
+  const controlAggregators = arr(controlIds.length).map(() =>
+    createAggregator(channels.length)
+  )
 
   while (true) {
     // Get MIDI data for all channels and controls
-    const midiInputListenerConfigs = fill(
-      Array(channels.length * controlIds.length),
-      0
+    const midiInputListenerConfigs = arr(
+      channels.length * controlIds.length
     ).map((x, i) => ({
       duration: 1000,
       type: command,
@@ -89,15 +103,28 @@ module.exports.analyse = async function analyse(
       return prediction
     })
 
-    // Aggregate predictions per control
-    const aggregatedInputs = chunk(predictions, channels.length).map(
-      controlPredictions => controlPredictions.map(([x, y]) => (y * 3 + x) / 8)
+    channelAggregations = channelAggregators.map((network, i) =>
+      aggregatePredictions(network, {
+        predictions,
+        dimensions: {
+          x: channelAggregators.length,
+          y: controlAggregators.length,
+        },
+        idx: i,
+        axis: Axis.Y,
+      })
     )
-    aggregatedPredictions = aggregatedInputs.map(controlPredictions =>
-      aggregatedSom.predict(controlPredictions)
+    controlAggregations = controlAggregators.map((network, i) =>
+      aggregatePredictions(network, {
+        predictions,
+        dimensions: {
+          x: channelAggregators.length,
+          y: controlAggregators.length,
+        },
+        idx: i,
+        axis: Axis.X,
+      })
     )
-
-    aggregatedSom.train(aggregatedInputs)
 
     //
     // Log all the things
@@ -130,14 +157,32 @@ module.exports.analyse = async function analyse(
         output += [0, 0, 0]
           .map(
             (x, j) =>
-              aggregatedPredictions[controlIdx][1] === i &&
-              aggregatedPredictions[controlIdx][0] === j
+              controlAggregations[controlIdx][1] === i &&
+              controlAggregations[controlIdx][0] === j
                 ? 1
                 : 0
           )
           .join('')
         output += '\n'
       }
+
+      output += '\n'
+    }
+    output += `\n    ${'-'.repeat(channels.length * 4)}-----------`
+    output += '\n'
+
+    for (let i = 0; i < 3; i += 1) {
+      output += '    '
+
+      output += channelAggregations
+        .map(prediction => {
+          const row = [0, 0, 0]
+          if (prediction[1] === i) {
+            row[prediction[0]] = 1
+          }
+          return row.join('')
+        })
+        .join('  ')
 
       output += '\n'
     }

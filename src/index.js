@@ -2,7 +2,8 @@ const express = require('express')
 
 const {
   analyse,
-  getAggregatedPredictions,
+  getChannelPredictions,
+  getControlPredictions,
   getPredictions,
 } = require('./analyse.js')
 const getMidiInput = require('./getMidiInput.js')
@@ -17,9 +18,14 @@ module.exports = async function run(options) {
     res.json({ data: predictions })
   })
 
-  app.get('/aggregated-predictions', (req, res) => {
-    const aggregatedPredictions = getAggregatedPredictions()
-    res.json({ data: aggregatedPredictions })
+  app.get('/channel-predictions', (req, res) => {
+    const data = getChannelPredictions()
+    res.json({ data })
+  })
+
+  app.get('/control-predictions', (req, res) => {
+    const data = getControlPredictions()
+    res.json({ data })
   })
 
   app.get('/status', (req, res) => {})
