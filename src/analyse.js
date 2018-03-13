@@ -13,9 +13,14 @@ const {
 let predictions = []
 let channelAggregations = []
 let controlAggregations = []
+let activeControls = []
 
 function arr(numElements) {
   return new Array(numElements).fill(null)
+}
+
+function span(values) {
+  return values.length === 0 ? 0 : max(values) - min(values)
 }
 
 module.exports.getPredictions = function getPredictions() {
@@ -28,6 +33,10 @@ module.exports.getChannelPredictions = function getChannelPredictions() {
 
 module.exports.getControlPredictions = function getControlPredictions() {
   return controlAggregations
+}
+
+module.exports.getActiveControls = function getActiveControls() {
+  return activeControls
 }
 
 module.exports.analyse = async function analyse(
@@ -91,11 +100,24 @@ module.exports.analyse = async function analyse(
     const midiChannelInputs = await Promise.all(
       midiInputListenerConfigs.map(config => collectMidiData(midiInput, config))
     )
+    activeControls = midiChannelInputs
+      .filter(({ values }) => values.length > 0)
+      .map(({ values, ...props }) => {
+        const minValue = min(values)
+        const maxValue = max(values)
+
+        return {
+          ...props,
+          min: minValue,
+          max: maxValue,
+          range: maxValue - minValue,
+        }
+      })
 
     // Get SOM predictions
     predictions = midiChannelInputs.map(({ values }) => {
       const frequency = Math.min(400, values.length)
-      const range = values.length > 0 ? max(values) - min(values) : 0
+      const range = span(values)
       const input = { frequency, range }
       const prediction = som.predict(input)
       som.train(input)

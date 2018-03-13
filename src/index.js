@@ -2,6 +2,7 @@ const express = require('express')
 
 const {
   analyse,
+  getActiveControls,
   getChannelPredictions,
   getControlPredictions,
   getPredictions,
@@ -26,6 +27,14 @@ module.exports = async function run(options) {
   app.get('/control-predictions', (req, res) => {
     const data = getControlPredictions()
     res.json({ data })
+  })
+
+  app.get('/active-controls', (req, res) => {
+    const meta = {
+      numControls: options.channels.length * options.controlIds.length,
+    }
+    const data = getActiveControls()
+    res.json({ meta, data })
   })
 
   app.get('/status', (req, res) => {})

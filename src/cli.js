@@ -31,13 +31,15 @@ const { channels, command, controls, device, duration, verbose } = args.parse(
   process.argv
 )
 
+console.log({ channels })
+
 const channelsArray =
   channels === OPTION_ALL
     ? new Array(16).fill(0).map((x, i) => i)
     : String(channels)
         .split(',')
         .map(x => parseInt(x))
-
+console.log({ channelsArray })
 const resolvedControlIds =
   controls === undefined
     ? []
