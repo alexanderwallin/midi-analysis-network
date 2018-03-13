@@ -59,9 +59,15 @@ module.exports = async function run(options) {
 
   // Exit handler
   async function exitHandler() {
-    if (midiInput) {
-      midiInput.close()
-      await delay(500)
+    console.log('exitHandler', { midiInput })
+    try {
+      if (midiInput) {
+        midiInput.close()
+        await delay(500)
+      }
+    } catch (err) {
+      console.log('Could not close midi input:')
+      console.log(err)
     }
 
     process.exit(0)

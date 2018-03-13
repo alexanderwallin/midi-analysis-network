@@ -25,11 +25,18 @@ args.option(
   'How long each analysed MIDI segment should be',
   DEFAULT_DURATION
 )
+args.option('print', 'Print analysis table')
 args.option('verbose', 'Print excessive MIDI data output')
 
-const { channels, command, controls, device, duration, verbose } = args.parse(
-  process.argv
-)
+const {
+  channels,
+  command,
+  controls,
+  device,
+  duration,
+  print,
+  verbose,
+} = args.parse(process.argv)
 
 console.log({ channels })
 
@@ -53,6 +60,7 @@ run({
   controlIds: resolvedControlIds,
   device,
   duration,
+  print,
   verbose,
 }).catch(err => {
   console.log('\nSomething went terribly wrong!\n')

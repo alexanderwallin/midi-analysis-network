@@ -13,6 +13,7 @@ const {
 let predictions = []
 let channelAggregations = []
 let controlAggregations = []
+let aggregatedXor = []
 let activeControls = []
 
 function arr(numElements) {
@@ -47,6 +48,7 @@ module.exports.analyse = async function analyse(
     controlIds = [],
     device = null,
     duration = DEFAULT_DURATION,
+    print = false,
     verbose = false,
   }
 ) {
@@ -147,26 +149,67 @@ module.exports.analyse = async function analyse(
         axis: Axis.X,
       })
     )
+    aggregatedXor = new Array(9).fill(0).map((x, i) => {
+      const row = Math.floor(i / 3)
+      const col = i % 3
+
+      return controlAggregations.some(
+        aggr => aggr[0] === col && aggr[1] === row
+      )
+        ? 1
+        : 0
+    })
 
     //
     // Log all the things
     //
-    let output = `\n    ${channels.join('    ')}    |  🦄`
-    output += `\n    ${'-'.repeat(channels.length * 4)}-----------`
-    output += '\n'
+    if (print === true) {
+      let output = `\n    ${channels.join('    ')}    |  🦄`
+      output += `\n    ${'-'.repeat(channels.length * 4)}-----------`
+      output += '\n'
 
-    for (const controlId of controlIds) {
-      output += `${String(controlId).padStart(3, ' ')}`
+      for (const controlId of controlIds) {
+        output += `${String(controlId).padStart(3, ' ')}`
 
-      const controlIdx = controlIds.indexOf(controlId)
+        const controlIdx = controlIds.indexOf(controlId)
+
+        for (let i = 0; i < 3; i += 1) {
+          output += i === 0 ? ' ' : '    '
+          output += predictions
+            .slice(
+              controlIdx * channels.length,
+              (controlIdx + 1) * channels.length
+            )
+            .map(prediction => {
+              const row = [0, 0, 0]
+              if (prediction[1] === i) {
+                row[prediction[0]] = 1
+              }
+              return row.join('')
+            })
+            .join('  ')
+          output += '  |  '
+          output += [0, 0, 0]
+            .map(
+              (x, j) =>
+                controlAggregations[controlIdx][1] === i &&
+                controlAggregations[controlIdx][0] === j
+                  ? 1
+                  : 0
+            )
+            .join('')
+          output += '\n'
+        }
+
+        output += '\n'
+      }
+      output += `\n    ${'-'.repeat(channels.length * 4)}-----------`
+      output += '\n'
 
       for (let i = 0; i < 3; i += 1) {
-        output += i === 0 ? ' ' : '    '
-        output += predictions
-          .slice(
-            controlIdx * channels.length,
-            (controlIdx + 1) * channels.length
-          )
+        output += '    '
+
+        output += channelAggregations
           .map(prediction => {
             const row = [0, 0, 0]
             if (prediction[1] === i) {
@@ -175,40 +218,15 @@ module.exports.analyse = async function analyse(
             return row.join('')
           })
           .join('  ')
+
         output += '  |  '
-        output += [0, 0, 0]
-          .map(
-            (x, j) =>
-              controlAggregations[controlIdx][1] === i &&
-              controlAggregations[controlIdx][0] === j
-                ? 1
-                : 0
-          )
-          .join('')
+
+        output += aggregatedXor.slice(i * 3, i * 3 + 3).join('')
+
         output += '\n'
       }
 
-      output += '\n'
+      logUpdate(output)
     }
-    output += `\n    ${'-'.repeat(channels.length * 4)}-----------`
-    output += '\n'
-
-    for (let i = 0; i < 3; i += 1) {
-      output += '    '
-
-      output += channelAggregations
-        .map(prediction => {
-          const row = [0, 0, 0]
-          if (prediction[1] === i) {
-            row[prediction[0]] = 1
-          }
-          return row.join('')
-        })
-        .join('  ')
-
-      output += '\n'
-    }
-
-    logUpdate(output)
   }
 }
