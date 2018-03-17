@@ -1,13 +1,9 @@
 /* eslint new-cap: 0 */
+const easymidi = require('easymidi')
 const inquirer = require('inquirer')
-const midi = require('midi')
 
 module.exports = async function getMidiInput({ device }) {
-  const input = new midi.input()
-  const portNames = new Array(input.getPortCount())
-    .fill(null)
-    .map((nothing, i) => input.getPortName(i))
-
+  const portNames = easymidi.getInputs()
   if (portNames.length === 0) {
     return null
   }
@@ -25,11 +21,5 @@ module.exports = async function getMidiInput({ device }) {
     resolvedPort = port
   }
 
-  const portIdx = portNames.indexOf(resolvedPort)
-  if (portIdx === -1) {
-    return null
-  }
-
-  input.openPort(portIdx)
-  return input
+  return new easymidi.Input(resolvedPort)
 }
